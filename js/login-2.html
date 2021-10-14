@@ -1,0 +1,355 @@
+
+function isValid(str) {
+    return !/[~`!#$%\^&*@+=\-\[\]\\';,/{}|\\":<>\?]/g.test(str);
+}
+
+$("#registerbtn").click(function () {
+    var name_inp = $("[name=username]");
+    var mail_inp = $("[name=email]");
+    var pass_inp = $("[name=password]");
+    var pass2_inp = $("[name=repassword]");
+
+    var username = name_inp.val();
+    var email = mail_inp.val();
+    var pass = pass_inp.val();
+    var pass1 = pass2_inp.val();
+
+    if (username.length < 1) {
+        empty_inp(name_inp);
+        return;
+    }
+    if (email.length < 1) {
+        empty_inp(mail_inp);
+        return;
+    }
+    if (pass.length < 1) {
+        empty_inp(pass_inp);
+        return;
+    }
+    if (pass1.length < 1) {
+        empty_inp(pass2_inp);
+        return;
+    }
+
+    if (username.length < 4) {
+        set_answer("Error", "Your name is very short", "error");
+        return;
+    }
+    if (email.indexOf("@") == -1 || email.indexOf(".") == -1 || email.length < 4) {
+        set_answer("Error", "Your Email incorrect", "error");
+        mail_inp.val("");
+        return;
+    }
+    if (pass.length < 8) {
+        set_answer("Error", "Your password is very short", "error");
+        return;
+    }
+    if (isValid(pass)) {
+        set_answer("Error", "Password should be include special characters", "error");
+        return;
+    }
+    if (pass != pass1) {
+        set_answer("Error", "Password mismatch", "error");
+        pass2_inp.val("");
+        return;
+    }
+
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+        beforeSend: function(){
+          no_toch();  
+        },
+        data: {
+            "type": "register",
+            "name": username,
+            "pass": pass,
+            "email": email,
+            "g-recaptcha-response": tokn
+        },
+        success: function (response) {
+             do_toch();  
+            switch (+response) {
+                case 1:
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = "check?type=register"; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "This name is already in use", "error");
+                    name_inp.val("");
+                    get_tok();
+                    break;
+                case 3:
+                    set_answer("Error", "This Email is already in use", "error");
+                    mail_inp.val("");
+                    get_tok();
+                    break;
+                case 4:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    get_tok();
+                    break;
+                case 5:
+                    set_answer("Error", "You are Robot", "error");
+                     $("input").val("");
+                    get_tok();
+                    break;
+                default:
+                   set_answer("Error", "Unexpected error", "error");
+                   $("input").val("");
+                   get_tok();
+                    break;
+            }
+        }
+    })
+
+})
+function set_answer(txt_top, txt_min, type) {
+    Swal.fire(
+        txt_top,
+        txt_min,
+        type
+    )
+}
+function empty_inp(objs) {
+    var obj = objs.parent();
+    obj.css("border-color", "red");
+    setTimeout(function () { obj.css("border-color", "#bbc6ff"); }, 500);
+}
+
+$("#remember_me").change(function () {
+    if ($("#remember_me").prop("checked")) {
+        $("#sp_remember").css("font-weight", "700");
+    } else {
+        $("#sp_remember").css("font-weight", "400");
+    }
+})
+
+$("#log_btn").click(function () {
+    var name_inp = $("[name=username_email]");
+    var pass_inp = $("[name=password_]");
+
+    var name_mail = name_inp.val();
+    var pass = pass_inp.val();
+
+    if (name_mail.length < 1) {
+        empty_inp(name_inp);
+        return;
+    }
+    if (pass.length < 1) {
+        empty_inp(pass_inp);
+        return;
+    }
+
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+         beforeSend: function(){
+          no_toch();  
+        },
+        data: {
+            "type": "login",
+            "name_mail": name_mail,
+            "pass": pass,
+            "g-recaptcha-response": tok
+        },
+        success: function (response) {
+             do_toch();  
+            switch (+response) {
+                case 1:
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = "/check_login"; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "User with such data was not found", "error");
+                    name_inp.val("");
+                    pass_inp.val("");
+                    get_tok();
+                    break;
+                case 3:
+                    set_answer("Error", "Wrong password", "error");
+                    pass_inp.val("");
+                    get_tok();
+                    break;
+                case 4:
+                    set_answer("Error", "You are Robot", "error");
+                     name_inp.val("");
+                    pass_inp.val("");
+                     get_tok();
+                    break;
+                default:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                     get_tok();
+                    break;
+            }
+        }
+    })
+})
+$("#check_btn").click(function () {
+    var _inp = $("[name=code]");
+
+    var code = _inp.html
+
+    if (code.length < 1) {
+        empty_inp(_inp);
+        return;
+    }
+    var types = _inp.attr("data-type");
+    if (types != "check_register" && types != "check_forgot") return;
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+        data: {
+            "type": types,
+            "code": code
+        },
+        success: function (response) {
+            switch (+response) {
+                case 1:
+                    var pg = (types == "check_register") ? "/account" : "/change";
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = pg; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "Wrong code", "error");
+                    _inp.val("");
+                    break;
+                default:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    break;
+            }
+        }
+    })
+})
+$("#check_login").click(function () {
+    var _inp = $("[name=code]");
+    var code = _inp.html
+    if (code.length < 1) {
+        empty_inp(_inp);
+        return;
+    }
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+        data: {
+            "type": "check_login",
+            "code": code
+        },
+        success: function (response) {
+            switch (+response) {
+                case 1:
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = "/account"; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "Wrong code", "error");
+                    _inp.val("");
+                    break;
+                default:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    break;
+            }
+        }
+    })
+})
+
+
+
+$("#check_email").click(function () {
+    var _email = $("[name=emails]");
+
+    var ml = _email.val();
+
+    if (ml.length < 1) {
+        empty_inp(_email);
+        return;
+    }
+    if (ml.indexOf("@") == -1 || ml.indexOf(".") == -1) {
+        set_answer("Error", "Invalid Email", "error");
+        return;
+    }
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+        data: {
+            "type": "check_mail",
+            "email": ml
+        },
+        success: function (response) {
+            switch (+response) {
+                case 1:
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = "check?type=forgot"; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "User with such Email was not found", "error");
+                    _email.val("");
+                    break;
+                default:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    break;
+            }
+        }
+    })
+})
+$("#change_pass").click(function () {
+    var pass_inp = $("[name=passs1]");
+    var pass2_inp = $("[name=passs2]");
+
+    var pass = pass_inp.val();
+    var pass1 = pass2_inp.val();
+
+    if (pass.length < 1) {
+        empty_inp(pass_inp);
+        return;
+    }
+    if (pass1.length < 1) {
+        empty_inp(pass2_inp);
+        return;
+    }
+
+    if (pass.length < 8) {
+        set_answer("Error", "Your password is very short", "error");
+        return;
+    }
+    if (pass != pass1) {
+        set_answer("Error", "Password mismatch", "error");
+        pass2_inp.val("");
+        return;
+    }
+
+    $.ajax({
+        url: "/php/login.php",
+        type: "post",
+        data: {
+            "type": "change",
+            "pass": pass
+        },
+        success: function (response) {
+            switch (+response) {
+                case 1:
+                    set_answer("Success", "", "success");
+                    setTimeout(function () { window.location.href = "/account"; }, 500);
+                    break;
+                case 2:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    break;
+                default:
+                    set_answer("Error", "Unexpected error", "error");
+                    $("input").val("");
+                    break;
+            }
+        }
+    })
+})
+function no_toch(){
+    $('body').css("pointer-events", "none");
+}
+function do_toch(){
+    $('body').css("pointer-events", "auto");
+}
